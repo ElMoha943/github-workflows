@@ -1,0 +1,35 @@
+name: Build Package Release
+
+on:
+  workflow_call:
+    inputs:
+      package_file:
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(python -c "
+          import json
+          print(json.load(open('${{ inputs.package_file }}'))['version'])
+          ")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create zip
+        run: |
+          zip -r "${{ github.event.repository.name }}.zip" Packages/
+
+      - name: Publish Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: |
+            ${{ github.event.repository.name }}.zip

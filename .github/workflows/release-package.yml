@@ -2,6 +2,10 @@ name: Release Package
 
 on:
   workflow_call:
+    outputs:
+      version:
+        description: "The released package version"
+        value: ${{ jobs.release.outputs.version }}
 
 permissions:
   contents: write

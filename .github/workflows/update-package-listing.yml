@@ -26,7 +26,7 @@ jobs:
       - name: Update source.json
         env:
           REPO_NAME: ${{ github.event.repository.name }}
-          RELEASE_TAG: ${{ inputs.version }}
+          RELEASE_TAG: v${{ inputs.version }}
           OWNER: ${{ github.repository_owner }}
 
         run: |

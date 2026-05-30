@@ -1,12 +1,10 @@
-name: Build Package Release
+name: Release Package
 
 on:
   workflow_call:
-    inputs:
-      package_file:
-        required: false
-        type: string
-        default: package.json
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -15,24 +13,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read version
-        id: version
+      - name: Read package version
+        id: pkg
         run: |
           VERSION=$(python -c "
           import json
-          print(json.load(open('${{ inputs.package_file }}'))['version'])
+          print(json.load(open('package.json'))['version'])
           ")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get latest release
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh release list \
+            --limit 1 \
+            --json tagName \
+            -q '.[0].tagName' || true)
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        id: compare
+        run: |
+          PKG="${{ steps.pkg.outputs.version }}"
+          LAST="${{ steps.latest.outputs.tag }}"
+
+          LAST=${LAST#v}
+
+          echo "Package: $PKG"
+          echo "Latest: $LAST"
+
+          if [ "$PKG" = "$LAST" ]; then
+            echo "publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "publish=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create zip
+        if: steps.compare.outputs.publish == 'true'
         run: |
           zip -r "${{ github.event.repository.name }}.zip" . \
             -x ".git/*" \
             -x ".github/*"
 
-      - name: Publish Release Asset
+      - name: Publish release
+        if: steps.compare.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.pkg.outputs.version }}
           files: |
             ${{ github.event.repository.name }}.zip

@@ -4,8 +4,9 @@ on:
   workflow_call:
     inputs:
       package_file:
-        required: true
+        required: false
         type: string
+        default: package.json
 
 jobs:
   release:
@@ -25,7 +26,9 @@ jobs:
 
       - name: Create zip
         run: |
-          zip -r "${{ github.event.repository.name }}.zip" Packages/
+          zip -r "${{ github.event.repository.name }}.zip" . \
+            -x ".git/*" \
+            -x ".github/*"
 
       - name: Publish Release Asset
         uses: softprops/action-gh-release@v2
